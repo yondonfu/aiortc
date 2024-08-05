@@ -12,6 +12,7 @@ from av.frame import Frame
 from . import clock, rtp
 from .codecs import get_capabilities, get_encoder, is_rtx
 from .codecs.base import Encoder
+from .codecs.h264_nvenc import H264NvEncEncoder
 from .exceptions import InvalidStateError
 from .mediastreams import MediaStreamError, MediaStreamTrack
 from .rtcrtpparameters import RTCRtpCodecParameters, RTCRtpSendParameters
@@ -39,6 +40,8 @@ from .stats import (
     RTCStatsReport,
 )
 from .utils import random16, random32, uint16_add, uint32_add
+
+import torch
 
 logger = logging.getLogger(__name__)
 
@@ -283,7 +286,7 @@ class RTCRtpSender:
         if self.__encoder is None:
             self.__encoder = get_encoder(codec)
 
-        if isinstance(data, Frame):
+        if isinstance(data, Frame) or isinstance(data, torch.Tensor):
             # Encode the frame.
             if isinstance(data, AudioFrame):
                 audio_level = rtp.compute_audio_level_dbov(data)
@@ -394,6 +397,9 @@ class RTCRtpSender:
 
         # release encoder
         if self.__encoder:
+            if isinstance(self.__encoder, H264NvEncEncoder):
+                self.__encoder.stop()
+
             del self.__encoder
 
         self.__log_debug("- RTP finished")

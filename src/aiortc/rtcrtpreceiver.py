@@ -12,6 +12,7 @@ from av.frame import Frame
 
 from . import clock
 from .codecs import depayload, get_capabilities, get_decoder, is_rtx
+from .codecs.h264_nvdec import H264NvDecDecoder
 from .exceptions import InvalidStateError
 from .jitterbuffer import JitterBuffer
 from .mediastreams import MediaStreamError, MediaStreamTrack
@@ -56,6 +57,8 @@ def decoder_worker(loop, input_q, output_q):
     while True:
         task = input_q.get()
         if task is None:
+            if isinstance(decoder, H264NvDecDecoder):
+                decoder.stop()
             # inform the track that is has ended
             asyncio.run_coroutine_threadsafe(output_q.put(None), loop)
             break
