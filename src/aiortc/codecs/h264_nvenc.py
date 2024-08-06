@@ -16,7 +16,7 @@ from av.packet import Packet
 from ..mediastreams import VIDEO_TIME_BASE, convert_timebase
 from .base import Encoder
 
-DEFAULT_BITRATE = 1000000  # 1 Mbps
+DEFAULT_BITRATE = 2000000  # 2 Mbps
 MIN_BITRATE = 500000  # 500 kbps
 MAX_BITRATE = 3000000  # 3 Mbps
 
