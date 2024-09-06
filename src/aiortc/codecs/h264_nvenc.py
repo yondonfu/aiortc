@@ -1,5 +1,6 @@
 import logging
 import math
+import os
 from fractions import Fraction
 from struct import pack
 from typing import Iterator, List, Optional, Tuple
@@ -16,9 +17,12 @@ from av.packet import Packet
 from ..mediastreams import VIDEO_TIME_BASE, convert_timebase
 from .base import Encoder
 
-DEFAULT_BITRATE = 2000000  # 2 Mbps
-MIN_BITRATE = 500000  # 500 kbps
-MAX_BITRATE = 3000000  # 3 Mbps
+DEFAULT_BITRATE = int(os.getenv("NVENC_DEFAULT_BITRATE", 1000000)) # default 1 mbps
+MIN_BITRATE = int(os.getenv("NVENC_MIN_BITRATE", 500000))  # default 500 kbps
+MAX_BITRATE = int(os.getenv("NVENC_MAX_BITRATE", 1000000))  # default 1 mpbs
+FRAMERATE = int(os.getenv("NVENC_FRAMERATE", 30))
+TUNING_INFO = os.getenv("NVENC_TUNING_INFO", "high_quality")
+PRESET = os.getenv("NVENC_PRESET", "P4")
 
 PACKET_MAX = 1300
 
@@ -180,7 +184,7 @@ class H264NvEncEncoder(Encoder):
         #     frame.pict_type = av.video.frame.PictureType.NONE
 
         if self.codec is None:
-            self.codec = VideoBatchEncoder()
+            self.codec = VideoBatchEncoder(self.target_bitrate)
 
         data_to_send = b""
         for package in self.codec(frame):
@@ -237,7 +241,7 @@ class H264NvEncEncoder(Encoder):
 
 
 class VideoBatchEncoder:
-    def __init__(self):
+    def __init__(self, bitrate):
         self.logger = logging.getLogger(__name__)
         self.cuda_stream = cvcuda.Stream().current
         self.encoder = None
@@ -245,6 +249,7 @@ class VideoBatchEncoder:
         self.cvcuda_YUVtensor_batch = None
         self.input_layout = "NCHW"
         self.gpu_input = True
+        self.bitrate = bitrate
 
         self.logger.info("Using PyNvVideoCodec encoder version: %s" % nvvc.__version__)
 
@@ -258,6 +263,7 @@ class VideoBatchEncoder:
                 batch.data.shape[2],
                 self.cuda_stream,
                 "NV12",
+                self.bitrate,
             )
 
         # Create 2 CVCUDA tensors: reformat NCHW->NHWC and color conversion RGB->YUV
@@ -312,13 +318,7 @@ class VideoBatchEncoder:
 
 
 class nvVideoEncoder:
-    def __init__(
-        self,
-        width,
-        height,
-        cuda_stream,
-        format,
-    ):
+    def __init__(self, width, height, cuda_stream, format, bitrate):
         """
         Create instance of HW-accelerated video encoder.
         :param width: encoded frame width.
@@ -326,6 +326,7 @@ class nvVideoEncoder:
         :param format: The format of the encoded video file.
                 (e.g. "NV12", "YUV444" see NvPyVideoEncoder docs for more info)
         """
+        self.logger = logging.getLogger(__name__)
         self.cuda_stream = cuda_stream
 
         self.pts_time = 0
@@ -338,7 +339,20 @@ class nvVideoEncoder:
         aligned_width = width + aligned_value
         width = aligned_width
 
-        config = {"preset": "P3", "codec": "h264", "cudastream": cuda_stream.handle}
+        config = {
+            "preset": PRESET,
+            "codec": "h264",
+            "cudastream": cuda_stream.handle,
+            "fps": FRAMERATE,
+            "tuning_info": TUNING_INFO,
+            "bitrate": bitrate,
+            "maxbitrate": bitrate,
+        }
+        self.logger.info(
+            f"creating NVENC width={width} height={height} format={format}"
+        )
+        self.logger.info(f"**kwargs={config}")
+
         self.nvEnc = nvvc.CreateEncoder(width, height, format, False, **config)
 
     def width(self):
