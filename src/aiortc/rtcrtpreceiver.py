@@ -279,7 +279,8 @@ class RTCRtpReceiver:
         else:
             self.__jitter_buffer = JitterBuffer(capacity=128, is_video=True)
             self.__nack_generator = NackGenerator()
-            self.__remote_bitrate_estimator = RemoteBitrateEstimator()
+            self.__remote_bitrate_estimator = None
+            # self.__remote_bitrate_estimator = RemoteBitrateEstimator()
         self._track: Optional[RemoteStreamTrack] = None
         self.__rtcp_exited = asyncio.Event()
         self.__rtcp_started = asyncio.Event()

@@ -17,7 +17,7 @@ from av.packet import Packet
 from ..mediastreams import VIDEO_TIME_BASE, convert_timebase
 from .base import Encoder
 
-DEFAULT_BITRATE = int(os.getenv("NVENC_DEFAULT_BITRATE", 1000000)) # default 1 mbps
+DEFAULT_BITRATE = int(os.getenv("NVENC_DEFAULT_BITRATE", 1000000))  # default 1 mbps
 MIN_BITRATE = int(os.getenv("NVENC_MIN_BITRATE", 500000))  # default 500 kbps
 MAX_BITRATE = int(os.getenv("NVENC_MAX_BITRATE", 1000000))  # default 1 mpbs
 FRAMERATE = int(os.getenv("NVENC_FRAMERATE", 30))
