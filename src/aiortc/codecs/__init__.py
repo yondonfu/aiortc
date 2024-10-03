@@ -15,7 +15,7 @@ from .h264 import H264Decoder, H264Encoder, h264_depayload
 from .opus import OpusDecoder, OpusEncoder
 from .vpx import Vp8Decoder, Vp8Encoder, vp8_depayload
 
-import torch
+import os
 
 PCMU_CODEC = RTCRtpCodecParameters(
     mimeType="audio/PCMU", clockRate=8000, channels=1, payloadType=0
@@ -150,7 +150,7 @@ def get_decoder(codec: RTCRtpCodecParameters) -> Decoder:
     elif mimeType == "audio/pcmu":
         return PcmuDecoder()
     elif mimeType == "video/h264":
-        if torch.cuda.is_available():
+        if os.getenv("NVDEC"):
             from .h264_nvdec import H264NvDecDecoder
 
             return H264NvDecDecoder()
@@ -172,7 +172,7 @@ def get_encoder(codec: RTCRtpCodecParameters) -> Encoder:
     elif mimeType == "audio/pcmu":
         return PcmuEncoder()
     elif mimeType == "video/h264":
-        if torch.cuda.is_available():
+        if os.getenv("NVENC"):
             from .h264_nvenc import H264NvEncEncoder
 
             return H264NvEncEncoder()
